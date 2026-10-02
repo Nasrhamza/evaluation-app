@@ -1,0 +1,51 @@
+{
+  "name": "evaluation-tracker",
+  "version": "5.1.0",
+  "description": "Application sécurisée de suivi des évaluations des élèves",
+  "main": "main.js",
+  "scripts": {
+    "build:renderer": "esbuild src/renderer.js --bundle --platform=browser --target=chrome152 --outfile=dist/renderer.js",
+    "start": "npm run build:renderer && electron .",
+    "test": "node --test",
+    "test:ui": "electron scripts/smoke-electron.js",
+    "check": "node --check main.js && node --check preload.js && node --check src/domain.js && node --check src/storage.js && node --check src/curriculum.js && node --check src/question-bank.js && node --check src/renderer.js && node --check scripts/smoke-electron.js",
+    "build": "npm run test && npm run build:renderer && electron-builder"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "docx": "9.7.1",
+    "jszip": "3.10.1",
+    "mammoth": "1.12.2"
+  },
+  "devDependencies": {
+    "electron": "44.1.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2"
+  },
+  "build": {
+    "appId": "com.evaluation.tracker",
+    "productName": "Suivi des évaluations",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "assets/**/*",
+      "dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

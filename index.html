@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'">
+  <title>Suivi des évaluations</title>
+  <link rel="stylesheet" href="styles.css?v=5.0.3">
+</head>
+<body>
+  <header class="app-header no-print">
+    <div>
+      <p class="eyebrow">Suivi pédagogique</p>
+      <h1>Tableau récapitulatif</h1>
+      <p class="subtitle">Évaluez les acquis, identifiez les besoins et préparez les groupes de travail.</p>
+    </div>
+    <div class="save-state" id="save-state" role="status" aria-live="polite">Données enregistrées localement</div>
+  </header>
+
+  <main class="app-shell">
+    <section class="panel metadata-panel no-print" aria-labelledby="context-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">Contexte</p>
+          <h2 id="context-title">Informations de l’évaluation</h2>
+        </div>
+      </div>
+      <div class="metadata-grid metadata-grid-context">
+        <label>Niveau<select id="level-select" aria-label="Niveau scolaire"></select></label>
+        <label>Enseignant(e)<input type="text" id="teacher-name" data-meta="teacherName" autocomplete="off" placeholder="Ex. Jamel Naser"></label>
+        <label>Classe<input type="text" id="classe" data-meta="classe" autocomplete="off"></label>
+        <label>Épreuve<input type="text" id="epreuve" data-meta="epreuve" autocomplete="off"></label>
+        <label>Unité<select id="unit-select" aria-label="Unité d’apprentissage"></select></label>
+        <label>Activité<select id="activity-select" aria-label="Activité évaluée"></select></label>
+      </div>
+      <div class="curriculum-context" id="curriculum-context" aria-live="polite"></div>
+    </section>
+
+    <section class="panel evaluation-panel" aria-labelledby="evaluation-title">
+      <div class="section-heading no-print">
+        <div>
+          <p class="section-kicker">Saisie</p>
+          <h2 id="evaluation-title">Résultats des élèves</h2>
+          <p id="student-summary" class="section-note">Aucun élève</p>
+        </div>
+        <div class="toolbar" aria-label="Actions principales">
+          <button type="button" class="button button-primary" id="add-student">＋ Ajouter un élève</button>
+          <label class="button button-secondary file-button" for="word-upload">Importer Word</label>
+          <input type="file" id="word-upload" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+          <button type="button" class="button button-secondary" id="export-word">Exporter l’évaluation Word</button>
+          <button type="button" class="button button-primary" id="show-homework-builder">Préparer les devoirs</button>
+          <button type="button" class="button button-ghost" id="show-history">Historique</button>
+          <button type="button" class="button button-ghost" id="show-stats">Statistiques</button>
+          <button type="button" class="button button-ghost" id="show-decision">Décision</button>
+          <button type="button" class="button button-secondary" id="show-bank">Banque d’exercices</button>
+          <button type="button" class="button button-ghost" id="backup-export">Sauvegarder</button>
+          <label class="button button-ghost file-button" for="backup-import">Restaurer</label>
+          <input type="file" id="backup-import" accept=".suivi,application/json" hidden>
+          <div class="print-actions">
+          <button type="button" class="button button-ghost" id="print-portrait">PDF portrait</button>
+          <button type="button" class="button button-ghost" id="print-landscape">PDF paysage</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="print-header" class="print-header" aria-hidden="true"></div>
+
+      <div class="table-scroll" tabindex="0" aria-label="Tableau des résultats, défilement horizontal possible">
+        <table id="student-table">
+          <caption class="visually-hidden">Résultats et niveaux de maîtrise des élèves</caption>
+          <thead id="student-table-head"></thead>
+          <tbody id="student-table-body"></tbody>
+          <tfoot id="student-table-foot"></tfoot>
+        </table>
+      </div>
+      <div id="print-footer" class="print-footer" aria-hidden="true"></div>
+
+      <div class="empty-state no-print" id="empty-state">
+        <div class="empty-icon" aria-hidden="true">◎</div>
+        <h3>Commencez votre évaluation</h3>
+        <p>Ajoutez un élève manuellement ou importez une liste depuis un fichier Word.</p>
+        <button type="button" class="button button-primary" id="empty-add-student">Ajouter le premier élève</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="stats-dialog" aria-labelledby="stats-title">
+    <div class="dialog-card">
+      <header class="dialog-header">
+        <div><p class="section-kicker">Vue d’ensemble</p><h2 id="stats-title">Statistiques de la classe</h2></div>
+        <button type="button" class="icon-button" data-close-dialog="stats-dialog" aria-label="Fermer les statistiques">×</button>
+      </header>
+      <div class="dialog-body" id="stats-content"></div>
+      <footer class="dialog-footer">
+        <button type="button" class="button button-secondary" id="print-stats">Exporter les statistiques en PDF</button>
+        <button type="button" class="button button-ghost" data-close-dialog="stats-dialog">Fermer</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog id="decision-dialog" aria-labelledby="decision-title">
+    <div class="dialog-card dialog-wide">
+      <header class="dialog-header">
+        <div><p class="section-kicker">Aide à la décision</p><h2 id="decision-title">Groupes pédagogiques</h2></div>
+        <button type="button" class="icon-button" data-close-dialog="decision-dialog" aria-label="Fermer les groupes pédagogiques">×</button>
+      </header>
+      <div class="dialog-body" id="decision-content"></div>
+      <footer class="dialog-footer">
+        <button type="button" class="button button-secondary" id="print-decision">Exporter les groupes en PDF</button>
+        <button type="button" class="button button-ghost" data-close-dialog="decision-dialog">Fermer</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog id="student-plan-dialog" aria-labelledby="student-plan-title">
+    <div class="dialog-card dialog-wide">
+      <header class="dialog-header">
+        <div><p class="section-kicker">Parcours personnalisé</p><h2 id="student-plan-title">Fiche individuelle</h2></div>
+        <button type="button" class="icon-button no-print" data-close-dialog="student-plan-dialog" aria-label="Fermer la fiche">×</button>
+      </header>
+      <div class="dialog-body" id="student-plan-content"></div>
+      <footer class="dialog-footer">
+        <div class="assignment-options no-print">
+          <button type="button" class="button button-secondary" id="new-student-version">↻ Nouvelle version</button>
+          <span class="version-badge" id="student-version-label">Version 1</span>
+          <label><input type="checkbox" id="student-show-correction"> Voir le corrigé</label>
+          <span class="version-badge" id="student-page-count">— page</span>
+        </div>
+        <button type="button" class="button button-ghost" id="reset-student-layout">Réinitialiser les modifications</button>
+        <button type="button" class="button button-primary" id="export-student-word">Exporter le devoir Word</button>
+        <button type="button" class="button button-secondary" id="print-student-plan">Exporter le devoir PDF</button>
+        <button type="button" class="button button-ghost" data-close-dialog="student-plan-dialog">Fermer</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog id="bank-dialog" class="bank-dialog" aria-labelledby="bank-title">
+    <div class="dialog-card bank-dialog-card">
+      <header class="dialog-header">
+        <div><p class="section-kicker">Contenu pédagogique</p><h2 id="bank-title">Banque d’exercices</h2></div>
+        <button type="button" class="icon-button" data-close-dialog="bank-dialog" aria-label="Fermer la banque">×</button>
+      </header>
+      <div class="bank-toolbar">
+        <label>Recherche<input type="search" id="bank-search" placeholder="Titre, consigne, indicateur…"></label>
+        <label>Niveau<select id="bank-level-filter"></select></label>
+        <label>Unité<select id="bank-unit-filter"></select></label>
+        <label>Activité<select id="bank-activity-filter"></select></label>
+        <label>Niveau de travail<select id="bank-difficulty-filter"></select></label>
+        <button type="button" class="button button-primary" id="bank-add">＋ Nouvel exercice</button>
+        <button type="button" class="button button-ghost" id="bank-export">Exporter Word</button>
+        <label class="button button-ghost file-button" for="bank-import">Importer Word</label>
+        <input type="file" id="bank-import" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+      </div>
+      <div class="bank-summary" id="bank-summary"></div>
+      <div class="bank-workspace">
+        <div class="bank-list" id="bank-list" aria-label="Liste des exercices"></div>
+        <form class="bank-editor" id="bank-editor" hidden>
+          <div class="editor-heading">
+            <div><p class="section-kicker">Éditeur</p><h3 id="bank-editor-title">Modifier l’exercice</h3></div>
+            <div class="editor-toggles">
+              <label class="active-toggle"><input type="checkbox" id="question-favorite"> Favori</label>
+              <label class="active-toggle"><input type="checkbox" id="question-active"> Actif</label>
+            </div>
+          </div>
+          <div class="editor-grid">
+            <label>Niveau<select id="question-level"></select></label>
+            <label>Unité<select id="question-unit"></select></label>
+            <label>Activité<select id="question-activity"></select></label>
+            <label>Critère<select id="question-criterion"></select></label>
+            <label>Difficulté<select id="question-difficulty"></select></label>
+            <label>Modèle<input type="text" id="question-model" maxlength="30"></label>
+            <label>Série / support commun<input type="text" id="question-set" maxlength="120" placeholder="Optionnel"></label>
+            <label>Type de visuel<select id="question-visual-type"><option value="none">Aucun</option><option value="image">Illustration</option><option value="table">Tableau</option></select></label>
+          </div>
+          <label>Titre<input type="text" id="question-title" maxlength="200" required></label>
+          <label>Indicateur<textarea id="question-indicator" rows="2"></textarea></label>
+          <label>Texte / support complet<textarea id="question-support" rows="6" placeholder="Texte de lecture, document ou situation support…"></textarea></label>
+          <label>Consigne / question<textarea id="question-prompt" rows="5" required></textarea></label>
+          <div class="form-grid">
+            <label>Forme de l’exercice<select id="question-task-type">
+              <option value="">Texte libre</option><option value="matching">Relier par une flèche</option><option value="choice">Entourer / choisir</option><option value="cloze">Compléter avec un choix</option><option value="order">Remettre en ordre</option><option value="short">Réponse courte</option><option value="oral">Dire / lire à voix haute</option>
+            </select></label>
+            <label>Lignes de réponse (vide = automatique)<input id="question-answer-lines" type="number" min="0" max="24"></label>
+          </div>
+          <label>Exemple résolu (différent des questions)<textarea id="question-example" rows="2"></textarea></label>
+          <label>Aide courte<textarea id="question-hint" rows="2"></textarea></label>
+          <label>Éléments de l’exercice<textarea id="question-items" rows="6" aria-describedby="question-items-help"></textarea></label>
+          <p id="question-items-help" class="field-help">Une ligne par question. Relier : gauche | bonne association. Choix : phrase | *bonne réponse | autre choix. Ordre : éléments dans l’ordre correct, séparés par |. L’astérisque et l’ordre correct ne sont jamais montrés à l’élève. Après modification, vérifiez aussi le corrigé ci-dessous.</p>
+          <label>Réponse attendue / correction<textarea id="question-answer" rows="4"></textarea></label>
+          <label>Titre du visuel<input type="text" id="question-visual-title" maxlength="200"></label>
+          <label>Données du visuel<textarea id="question-visual-data" rows="4" placeholder="Illustration : Étape 1|Étape 2|Étape 3. Tableau : une ligne par rangée et | entre les cellules."></textarea></label>
+          <label>Source<input type="text" id="question-source" maxlength="200"></label>
+          <div class="editor-actions">
+            <button type="submit" class="button button-primary">Enregistrer</button>
+            <button type="button" class="button button-secondary" id="question-duplicate">Dupliquer</button>
+            <button type="button" class="button button-danger" id="question-delete">Supprimer</button>
+          </div>
+        </form>
+        <div class="bank-editor-empty" id="bank-editor-empty">Sélectionnez un exercice pour consulter ou modifier tout son contenu.</div>
+      </div>
+      <footer class="dialog-footer">
+        <span>Les modifications sont enregistrées automatiquement sur cet ordinateur.</span>
+        <button type="button" class="button button-ghost" data-close-dialog="bank-dialog">Fermer</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog id="homework-builder-dialog" aria-labelledby="homework-builder-title">
+    <div class="dialog-card dialog-wide">
+      <header class="dialog-header">
+        <div><p class="section-kicker">Générateur</p><h2 id="homework-builder-title">Préparer les devoirs de la classe</h2></div>
+        <button type="button" class="icon-button" data-close-dialog="homework-builder-dialog" aria-label="Fermer">×</button>
+      </header>
+      <div class="dialog-body builder-body">
+        <div class="builder-grid">
+          <label>Nom de l’enseignant(e)<input type="text" id="homework-teacher" maxlength="160" placeholder="Ex. Jamel Naser"></label>
+          <label>Mode<select id="homework-mode"><option value="personalized">Personnalisé selon chaque élève</option><option value="common">Même devoir pour toute la classe</option></select></label>
+          <label>Mise en page<select id="homework-layout"><option value="comfortable">Confortable</option><option value="compact">Compacte</option><option value="large">Grande écriture</option></select></label>
+          <label>Durée<input type="number" id="homework-duration" min="10" max="180" step="5"></label>
+          <label>Nombre d’exercices<input type="number" id="homework-count" min="1" max="10"></label>
+          <label>Difficulté du devoir commun<select id="homework-common-difficulty"><option value="remediation">Remédiation</option><option value="consolidation">Consolidation</option><option value="approfondissement">Approfondissement</option></select></label>
+        </div>
+        <fieldset class="builder-criteria"><legend>Critères à inclure</legend><div id="homework-criteria"></div></fieldset>
+        <div id="homework-validation" class="assignment-validation" aria-live="polite"></div>
+        <p class="builder-note">Le système vérifie les critères, les exercices, les supports et l’espace de réponse avant l’export. L’évaluation se fait avec −, +, ++ et +++.</p>
+      </div>
+      <footer class="dialog-footer">
+        <button type="button" class="button button-secondary" id="export-class-word">Word groupé</button>
+        <button type="button" class="button button-secondary" id="export-class-zip">ZIP Word individuels</button>
+        <button type="button" class="button button-primary" id="export-class-pdf">PDF groupé</button>
+        <button type="button" class="button button-ghost" data-close-dialog="homework-builder-dialog">Fermer</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog id="history-dialog" aria-labelledby="history-title">
+    <div class="dialog-card dialog-wide">
+      <header class="dialog-header">
+        <div><p class="section-kicker">Traçabilité</p><h2 id="history-title">Historique des devoirs distribués</h2></div>
+        <button type="button" class="icon-button" data-close-dialog="history-dialog" aria-label="Fermer">×</button>
+      </header>
+      <div class="dialog-body" id="history-content"></div>
+      <footer class="dialog-footer"><button type="button" class="button button-ghost" data-close-dialog="history-dialog">Fermer</button></footer>
+    </div>
+  </dialog>
+
+  <section id="batch-print-document" class="batch-print-document" aria-hidden="true"></section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="dist/renderer.js?v=5.0.3" defer></script>
+</body>
+</html>
